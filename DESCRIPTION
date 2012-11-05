@@ -1,5 +1,5 @@
 Package: peplib
-Version: 1.03
+Version: 1.04
 Title: Peptide Library Analysis Methods
 Author: Andrew White <white.d.andrew@gmail.com>
 Maintainer: Andrew White <white.d.andrew@gmail.com>
@@ -9,6 +9,6 @@ Description: This package provides a variety of methods for dealing
         with analysis of peptide library data, including clustering,
         motif finding, and QSAR model fitting.
 LazyLoad: yes
-Packaged: 2012-10-08 19:26:45 UTC; whitead
+Packaged: 2012-11-05 20:43:14 UTC; whitead
 Repository: CRAN
-Date/Publication: 2012-10-09 15:49:05
+Date/Publication: 2012-11-06 07:11:59
