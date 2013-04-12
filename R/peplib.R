@@ -40,7 +40,7 @@ rownames(bs85) <- aabet
 
 default.MetricParams <- new("MetricParams", smatrix=bs85, gapOpen=-10, gapExtension=-0.2)
 
-sDist <- function(s1, s2, params=default.MetricParams) {
+sdist <- function(s1, s2, params=default.MetricParams) {
   
   distance <- rep(NA, length(s1))
 
@@ -89,16 +89,16 @@ sDist <- function(s1, s2, params=default.MetricParams) {
 }
 
 sHammingDist <- function(s1, s2, params) {
-  distance <- sapply(1:min(length(s1),length(s2)), FUN=function(x) {as.double(s1[x] == s2[x])})
-  distance <- distance - (max(length(s1), length(s2)) - min(length(s1), length(s2)))
+  distance <- sum(sapply(1:min(length(s1),length(s2)), FUN=function(x) {as.double(s1[x] != s2[x])}))
+  distance <- distance + abs(length(s1) - length(s2))
+  return(as.double(distance))
 }
 
 dist.Sequences <- function(seqs, method="substitution", params=default.MetricParams, ...) {
-                                        #for speed, get rid of all that generics stuff
   seqs <- seqs@.Data
   
   if(method == "substitution" || method=="euclidian") {
-    dist <- sDist
+    dist <- sdist
   }
   if(method == "hamming") {
     dist <- sHammingDist
@@ -137,40 +137,67 @@ setMethod("[", signature=c("Sequences"), definition=function(x, i, j, ..., drop)
 } )
 
 
-wdist <- function(seqmatrix, sweights=NULL, dist=sDist, params=default.MetricParams) {
+wdist <- function(seqmatrix, sweights=NULL, dist=sdist, params=default.MetricParams) {
   if(is.null(sweights)){
     sweights <- createSWeights(seqmatrix)
   }		      
 
-  dmatrix <- sDist(seqmatrix, dist, params)
+  dmatrix <- sdist(seqmatrix, dist, params)
   dmatrix <- dmatrix * (sweights %*% t(sweights))
   return(dmatrix)
 }
 
+explode <- function(string, max, alphabet) {
+  result <- strsplit(string, split="")[[1]]
+  while(length(result) < max) {
+    result <- c(result,"-")
+  }
+  result <- sapply(result, FUN=function(x){if(!(x %in% alphabet)) {"B"} else {x}})
+  return(result)
+}
+
+processError <- function(e, mymessage) {
+  cat(paste(mymessage, "\n"))
+}
+
 read.sequences <- function(file, header = FALSE, sep = "", quote="\"", dec=".",
                  fill = FALSE, comment.char="", alphabet=aabet) {
-  #assumes that the first column is the sequence information
   
-  data <- read.table(file, sep=sep, quote=quote, dec=dec, fill=fill, header=header, comment.char=comment.char)  
-  data <- toupper(as.character(data[,1]))
+  #assumes that the first column is the sequence information
+
+  #Try loading the file
+  tryCatch(data <- read.table(file, header=header, sep=sep, quote=quote, dec=dec, fill=fill, comment.char=comment.char), error=function(e) {processError(e, "Could not read file")})
+  
+  #Ok, continue to spread out sequences
+  t <- tryCatch(data <- toupper(as.character(data[,1])), error=function(e) {processError(e, "Non-letters in sequence file")})
+
+  if(inherits(t, "try-error")) return
+  
   nseqs <- length(unique(data))
-  seqmatrix <- matrix(sapply(data, FUN=function(x) {unlist(strsplit(x, split="", fixed=T))}), nrow=length(data), byrow=TRUE)
-  if(length(alphabet) == 0) {
-    alphabet = unique(c(seqmatrix))
-  }
-  seqmatrix <- apply(seqmatrix, MARGIN=2, FUN=function(x) {sapply(x, FUN=function(y) {which(alphabet == as.character(y))})})
+  t <- tryCatch(maxlength <- max(sapply(data, FUN=function(x) {length(unlist(strsplit(x, split="")))})), error=function(e) {processError(e, "Failed to split sequence into characters")})
+
+  if(inherits(t, "try-error")) return
+  
+ t <- tryCatch( seqmatrix <- matrix(sapply(data, FUN=function(x) {explode(x, maxlength, alphabet)}), nrow=length(data), byrow=TRUE), error=function(e) {processError(e, "Failed to process non-cannonical amino acids")})
+
+  if(inherits(t, "try-error")) return
+
+  t <- tryCatch(seqmatrix <- apply(seqmatrix, MARGIN=2, FUN=function(x) {sapply(x, FUN=function(y) {which(alphabet == as.character(y))})}), error=function(e) {processError(e, "Failed to convert to numerical representation")})
+
+  if(inherits(t, "try-error")) return
 
   rnames <- apply(seqmatrix, MARGIN=1, FUN=function(x) {paste(alphabet[x], collapse="")})
   for(i in 1:(length(rnames) - 1)) {
     if(rnames[i] %in% rnames[(i + 1):length(rnames)]) {
-      rnames[i] <- paste(rnames[i], ".", sum(rnames[i] == rnames[(i + 1):length(rnames)]), sep="")
-    }
+    rnames[i] <- paste(rnames[i], ".", sum(rnames[i] == rnames[(i + 1):length(rnames)]), sep="")
   }
-  
+  }
+
   rownames(seqmatrix) <- rnames
 
-  
+
   seqs <- new("Sequences",  seqmatrix, alphabet=alphabet, nseqs=nseqs)
+
   
   return(seqs)
 }
@@ -240,21 +267,25 @@ write.fasta <- function(seqs, motifModel = NULL, file = "",  eol = "\n") {
 
 }
 
-plot.Sequences <- function(seqs, clusterNumber=3, params=default.MetricParams, distanceMatrix=dist.Sequences(seqs, params=params), clusters=aclust(distanceMatrix, clusterNumber), legendText=c()) {
-  
+plot.Sequences <- function(seqs, clusterNumber=3, params=default.MetricParams, distanceMatrix=dist.Sequences(seqs, params=params), clusters=aclust(distanceMatrix, clusterNumber), legendText=c(), main="") {
+
+  #This makes it so that the coloring follows the size of the clusters. Makes plots reproducible since the
+  #cluster indices from kmeans are not reproducible.
+  idmap <- order(as.integer(lapply(clusters, length)))
+    
   colors <- rep("black", nrow(seqs))
   shades <- hcl(h=1:clusterNumber * (360 / clusterNumber), c=90, l=70 )
   for(i in 1:length(clusters)) {
-    colors[clusters[[i]]] <- shades[i]
+    colors[clusters[[idmap[i]]]] <- shades[i]
   }
   
 #  fit <- cmdscale(distanceMatrix, eig=T, k=2)
   fit <- prcomp(distanceMatrix)
   x <- fit$x[,1]
   y <- fit$x[,2]
-  plot(x,y,pch=19, xlab="Component 1", ylab="Component 2", col=colors)
+  plot(x,y,xlab="Component 1", ylab="Component 2", col=colors, main=main)
   if(length(legendText) > 0) {
-    legend(max(x), max(y) *1.25, legendText, col=shades,text.col="black", pch=rep(19, length(legendText)), xpd=TRUE)
+    legend(max(x), max(y) * 1.25, legendText, col=shades,text.col="black", pch=rep(1, length(legendText)), xpd=TRUE)
   }
 }
 
@@ -308,7 +339,7 @@ motifModelSet <- function(seqs, motifNumber=NA, type="fixed", width=4, verbose=T
       ll$logLik[i] <- logLik(motifModelSet(seqs, i, type, width, verbose, clusterType))
     }
     cat("\n")
-    plot(ll, xlab="Cluster Number", pch=19, col="black", main=plotMain)
+    plot(ll, xlab="Cluster Number", col="black", main=plotMain)
     lines(ll, col="black", lty=1)
     motifNumber <- ll$clusterN[which.min(ll$logLik)]
   }else if(motifNumber == 1) {
@@ -1051,7 +1082,7 @@ plot.MotifModelSet <- function(x,...) {
   par(mar=c(5,4,2,5))
   plot(x,y,xlab="Component 1", ylab="Component 2", col=colors)
 
-  legend(max(x) / 2, max(y) * 1.25, legendText, col=shades,text.col="black", pch=rep(19, clusterNumber), xpd=TRUE)
+  legend(max(x) / 2, max(y) * 1.25, legendText, col=shades,text.col="black", pch=rep(1, clusterNumber), xpd=TRUE)
 
 
   
@@ -1145,7 +1176,7 @@ plot.MotifModel <- function(x,...) {
 
 setMethod("plot", "MotifModel", function(x, y, ...) plot.MotifModel(x,...))
 
-aclust <- function(sDistMatrix, clusterNumber, verbose=T, type="kmeans", knstart=3) {	   
+aclust <- function(sDistMatrix, clusterNumber, verbose=T, type="kmeans", knstart=20) {	   
   
   if(class(sDistMatrix) == "Sequences") {
     sDistMatrix <- dist(sDistMatrix)
@@ -1304,7 +1335,7 @@ findMinDistElement <- function(sDistMatrix) {
 
 simpleDescriptors <- function(seqs, response=numeric(0), include.statistics=FALSE) {
 
-  desc <- descriptors(seqs, response, base.matrix=defaultBaseMatrix[,c("count.BasicGroups", "count.AcidicGroups", "count.PolarGroups", "count.NonPolarGroups", "count.AromaticGroups", "count.ChargedGroups",  "ALogP")], do.var=F,
+  desc <- descriptors(seqs, response, base.frame=defaultBaseMatrix[,c("count.BasicGroups", "count.AcidicGroups", "count.PolarGroups", "count.NonPolarGroups", "count.AromaticGroups", "count.ChargedGroups",  "ALogP")], do.var=F,
   alags=c(), do.counts=F, do.mean=T, do.position=F,
   include.statistics=include.statistics, accuracy=0.001)
 
@@ -1313,7 +1344,7 @@ simpleDescriptors <- function(seqs, response=numeric(0), include.statistics=FALS
   
 }
 
-descriptors <- function(seqs, response=numeric(0), base.matrix=NA, do.var=TRUE, alags=c(1,2,3), do.mean=TRUE, do.counts=FALSE, do.position=TRUE, alphabet=seqs@alphabet, include.statistics=TRUE, accuracy=0.01) {
+descriptors <- function(seqs, response=numeric(0), base.frame=NA, do.var=TRUE, alags=c(1,2,3), do.mean=TRUE, do.counts=FALSE, do.position=TRUE, alphabet=seqs@alphabet, include.statistics=TRUE, accuracy=0.01) {
 
   
   if(include.statistics) {
@@ -1321,13 +1352,20 @@ descriptors <- function(seqs, response=numeric(0), base.matrix=NA, do.var=TRUE, 
       cat("Warning: the sequence space is very large for calculating statistics")
     }
   }
-
-  if(length(base.matrix) == 1 && is.na(base.matrix)) {
-    base.matrix <- defaultBaseMatrix
+  
+  if(length(base.frame) == 1 && is.na(base.frame)) {
+    base.frame <- defaultBaseMatrix
   }
+
+  base.matrix <- data.matrix(base.frame)
+
+
+  #For speed, create matrix vesion of sequences
+  seqmatrix <- data.matrix(seqs@.Data)
+  
   
   #get number of descriptors
-  base.num <- ncol(base.matrix)
+  base.num <- ncol(base.frame)
   multiplier <- 0
   if(!is.null(alags)) {
     multiplier <- length(alags)
@@ -1337,7 +1375,7 @@ descriptors <- function(seqs, response=numeric(0), base.matrix=NA, do.var=TRUE, 
   if(do.mean)
     multiplier <- multiplier + 1
   if(do.position)
-    multiplier <- multiplier + ncol(seqs)
+    multiplier <- multiplier + ncol(seqmatrix)
 
 
   desc.num <- base.num * multiplier
@@ -1349,22 +1387,22 @@ descriptors <- function(seqs, response=numeric(0), base.matrix=NA, do.var=TRUE, 
   index <- 1
   for(i in 1:base.num) {
     if(do.mean) {
-      dnames[index] <- paste(names(base.matrix)[i], 'AVG', sep=".")
+      dnames[index] <- paste(names(base.frame)[i], 'AVG', sep=".")
       index <- index + 1
     }
     if(do.var) {
-      dnames[index] <- paste(names(base.matrix)[i], 'VAR', sep=".")
+      dnames[index] <- paste(names(base.frame)[i], 'VAR', sep=".")
       index <- index + 1
     }
     if(!is.null(alags)) {
       for(j in 1:length(alags)) {
-        dnames[index] <- paste(names(base.matrix)[i], 'AUTO', alags[j], sep=".")
+        dnames[index] <- paste(names(base.frame)[i], 'AUTO', alags[j], sep=".")
         index <- index + 1
       }
     }
     if(do.position) {
-      for(j in 1:ncol(seqs)) {
-        dnames[index] <- paste(names(base.matrix)[i], 'P',j,sep=".")
+      for(j in 1:ncol(seqmatrix)) {
+        dnames[index] <- paste(names(base.frame)[i], 'P',j,sep=".")
         index <- index + 1
       }
     }
@@ -1381,14 +1419,14 @@ descriptors <- function(seqs, response=numeric(0), base.matrix=NA, do.var=TRUE, 
 
   
   #Now calculate the descriptors
-  desc <- empty.df(dnames, rownames(seqs))
+  desc <- empty.matrix(dnames, rownames(seqmatrix))
   finished <- 0
   res <- rep(NA, base.num * multiplier)
-  for(i in 1:nrow(seqs)) {
+  for(i in 1:nrow(seqmatrix)) {
     index <- 1
     for(j in 1:base.num) {
       
-      cur.desc <- base.matrix[seqs@.Data[i,], j]
+      cur.desc <- base.matrix[seqmatrix[i,], j]
       cur.mean <- mean(cur.desc)
       cur.var <- var(cur.desc)
       
@@ -1407,7 +1445,7 @@ descriptors <- function(seqs, response=numeric(0), base.matrix=NA, do.var=TRUE, 
         }
       }
       if(do.position){
-        for(k in 1:ncol(seqs)) {
+        for(k in 1:ncol(seqmatrix)) {
           res[index] <- cur.desc[k]
           index <- index + 1
         }
@@ -1415,7 +1453,7 @@ descriptors <- function(seqs, response=numeric(0), base.matrix=NA, do.var=TRUE, 
     }
     if(do.counts) {
       for(j in 1:length(alphabet)) {
-        res[index] <- sum(seqs@.Data[i,] == j)
+        res[index] <- sum(seqmatrix[i,] == j)
         index <- index + 1
       }
     }
@@ -1530,7 +1568,7 @@ autocorrelation <- function(data,ef=mean(data), v=var(data), lag=1) {
                                     
 factory.descriptor <- function(data) {
 
-  d <- new("Descriptors", data@.Data, row.names=rownames(data), names=colnames(data), response=numeric(0), pvalues=rep(0, ncol(data)))
+  d <- new("Descriptors", data.frame(data@.Data), row.names=rownames(data), names=colnames(data), response=numeric(0), pvalues=rep(0, ncol(data)))
   names(d@pvalues) <- colnames(data)
   return(d)
   
@@ -1538,6 +1576,13 @@ factory.descriptor <- function(data) {
 
 empty.df <- function(cnames, rnames, default=NA) {
   df<-data.frame(matrix(rep(default,length(cnames)*length(rnames)), nrow=length(rnames)))
+  colnames(df)<-cnames
+  rownames(df) <- rnames
+  return(df)
+}
+
+empty.matrix <- function(cnames, rnames, default=NA) {
+  df<-matrix(rep(default,length(cnames)*length(rnames)), nrow=length(rnames))
   colnames(df)<-cnames
   rownames(df) <- rnames
   return(df)

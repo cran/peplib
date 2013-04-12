@@ -4,7 +4,6 @@
 \alias{Descriptors}
 \alias{descriptors}
 \alias{Descriptors-class}
-%%\alias{FiveTwoCV,Descriptors-method}
 \alias{plot,Descriptors-method}
 
 \title{Class "Descriptors"}
@@ -16,14 +15,14 @@ vs. the space of possible sequences. The class should be created by a call to \c
 arguments and details below) or \code{\link{simpleDescriptors}}.
 }
 \section{Objects from the Class}{
-Objects can be created by calls of the form \code{descriptors(seqs, response=numeric(0), base.matrix=NA, do.var=TRUE, alags=c(1,2,3), do.mean=TRUE, do.counts=TRUE, do.position=TRUE, alphabet=seqs@alphabet, include.statistics=TRUE, accuracy=0.01)}
+Objects can be created by calls of the form \code{descriptors(seqs, response=numeric(0), base.frame=NA, do.var=TRUE, alags=c(1,2,3), do.mean=TRUE, do.counts=TRUE, do.position=TRUE, alphabet=seqs@alphabet, include.statistics=TRUE, accuracy=0.01)}
 }
 \section{Arguments}{
 \describe{
   \item{seqs}{A \code{\linkS4class{Sequences} object}}
   \item{response}{An optional array containing responses for each
     sequence. \code{nrow(seqs)} should be equal to \code{length(response)}.}
-  \item{base.matrix}{A \code{data.frame} containing descriptors
+  \item{base.frame}{A \code{data.frame} containing descriptors
     calculated on each amino acid. See details.}
   \item{do.var}{Calculate the additional descriptors which are the
     variance of single residue descriptors along the sequence}
@@ -59,7 +58,7 @@ Objects can be created by calls of the form \code{descriptors(seqs, response=num
   \code{\link{wilcox.test}}. That is a non-parametric version of the
   Student's t-test.
 
-  The calculations are based on the given \code{base.matrix}
+  The calculations are based on the given \code{base.frame}
   parameter. Given that matrix, which contains the descriptors
   calculated on all the individual amino acids, it is possible to
   calculate many sequence level descriptors. If the means are being
@@ -91,7 +90,7 @@ motif discovery.  \code{include.staistics} will calculate the p-values
 for each of the descriptors. This is only practical for smaller lengths;
 less than 10.
 
-  If \code{base.matrix} is \code{NA}, then the default will be used,
+  If \code{base.frame} is \code{NA}, then the default will be used,
   \code{\link{defaultBaseMatrix}}. See the documentation on that dataset
   for more information.
   
@@ -119,26 +118,6 @@ Class \code{"\linkS4class{list}"}, by class "data.frame", distance 2.
 Class \code{"\linkS4class{oldClass}"}, by class "data.frame", distance 2.
 Class \code{"\linkS4class{vector}"}, by class "data.frame", distance 3.
 }
-%%\section{Methods}{
-%%  \describe{
-%%    \item{FiveTwoCV}{\code{FiveTwoCV(desc, resp=desc@response,
-%%	modelFxn)}: This method provides a way to preform 5x2
-%%      cross-validation on the modelling function \code{modelFxn} on the
-%%      descriptors. See \link{FiveTwoCV} for more information about the
-%%      cross-validation and model function. }
-%%    \item{plot}{\code{plot(desc,...)}:
-%%      This method makes a few plots used for exploring the descriptor
-%%      space. First, if there is response for each sequence, a histogram
-%%      of the correlation of the response with the descriptors is
-%%      plotted. Next, a barplot showing the most correlated descriptors
-%%      (with the response) are plotted. A PCA is then preformed and a
-%%      scree plot is shown, a projection onto the top PCAs, and finally a
-%%      biplot. The scree plot and projection can help you judge if a few
-%%      principal components can describe your dataset and the biplot can
-%%      show you which descriptors are actually spreading out your sequences.
-%%    }
-%%	 }
-%%}
 
 \author{
 Andrew White
@@ -149,7 +128,7 @@ Andrew White
 \code{\linkS4class{Sequences}}, \code{\link{defaultBaseMatrix}},
 \code{\link{wilcox.test}}
 }
-\examples{\dontrun{
+\examples{
 
 #calculate some descriptors
 data(SHP2Sequences)
@@ -159,11 +138,6 @@ SHP2desc <- descriptors(SHP2Sequences, do.var=FALSE,
 alags=c(), do.mean=TRUE, do.counts=FALSE,
 do.position=FALSE, include.statistics=FALSE)
 
-
-#plot them
-plot(SHP2desc)
-
-
 #get some descriptors and response sets
 data(AMPSequences)
 data(AMPSequences.response)
@@ -172,10 +146,7 @@ AMPdesc <- descriptors(AMPSequences, response=AMPSequences.response[,1], do.var=
 alags=c(), do.mean=TRUE, do.counts=FALSE,
 do.position=FALSE, include.statistics=FALSE)
 
-#plot with descriptors
-plot(AMPdesc)
 
-
-}}
+}
 \keyword{classes}
 \keyword{datagen}

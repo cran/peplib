@@ -1,6 +1,6 @@
-1aaf813a07f46e4cf1ecd459d53bb996 *DESCRIPTION
+e20229d2627a84c715a0f92962d21874 *DESCRIPTION
 b34427aac8f3fccf9176b98e8b7c96a3 *NAMESPACE
-4fb81031a5acaf4d96f21a7fe930b619 *R/peplib.R
+20ec8cb8031aa09fdc54f97fc8812964 *R/peplib.R
 2196f9e9ef60bc7c301e9f5db2e10bbb *R/sysdata.rda
 a6d82c9c46dec734014ec5674bb019e3 *data/AMPSequences.RData
 d3f379ae44997873df4987fca8078085 *data/AMPSequences.response.RData
@@ -9,18 +9,18 @@ d3f379ae44997873df4987fca8078085 *data/AMPSequences.response.RData
 4bafea66c2c8cda54ededcf7495bb536 *data/blosum50.RData
 cedb410960b035e8f5081a05ef5278ce *data/blosum62.RData
 4ecaf33b7a247acc949315eaf61a7f6b *data/blosum90.RData
-c0f8e1b77f1a572fa781e914c61e97c9 *data/defaultBaseMatrix.RData
+2196f9e9ef60bc7c301e9f5db2e10bbb *data/defaultBaseMatrix.RData
 0c245301238fda71c974e5f01aa06465 *man/AMPSequences.Rd
 436111e03bfbb689465c1b1a39a488f4 *man/AMPSequences.response.Rd
 91082977b244d0f389737f042e7b4164 *man/BIC.Rd
-bd8d00d27429c45314166b8dfb74825e *man/Descriptors-class.Rd
+7ee137d15435862beafa61d6684b8190 *man/Descriptors-class.Rd
 ae1f1fd5d19447ed18923ac5699ac03b *man/MetricParams-class.Rd
 7ed1dcb7ef25e4bc4f5aed3a909cd50c *man/MotifModel-class.Rd
 014f16e77831c31ff8d7328eda71e0c9 *man/MotifModelSet-class.Rd
 10b5d0fbf731c559fd216b669f159ca6 *man/SHP2Sequences.Rd
-33709c2f9544ee98916a856d4776ae61 *man/Sequences.Rd
+c1dee70e8dd727f6dcecbbc20b9107c8 *man/Sequences.Rd
 1c5cc6bf27a1d9464ff6e2fa5e88809f *man/TULASequences.Rd
-96156f939971d5f28c72a7f05f5e4ee5 *man/aclust.Rd
+7a7e2e82be097b6a3fc6bba1ee4f3356 *man/aclust.Rd
 95e751a8c1a9c47d8e837ee9f3019e72 *man/blosum50.Rd
 2898446bdfae2aaf692ddf14ce76c1b4 *man/blosum62.Rd
 76d9d40f376f11cb2683ca731063f62c *man/blosum90.Rd
@@ -33,5 +33,4 @@ ae1f1fd5d19447ed18923ac5699ac03b *man/MetricParams-class.Rd
 a0f8a6d3cc3f8f93d0adfe10d4f9361c *man/simpleDescriptors.Rd
 ea43f96ed5d4c11cab0536e7aa8bda2f *man/write.fasta.Rd
 f5bcd25e55f93bd74bf7a3c3c6fd8140 *man/write.sequences.Rd
-7617f0daa33661ea64d24ea74267ff20 *tests/test.R
 a40ca93f2c03e52ded11fa61fe35f10f *tutorial.pdf
